@@ -1,0 +1,16 @@
+#!/bin/sh
+#PBS -N KnowledgeDistillation
+#PBS -q gpu_1
+#PBS -P CSCI1166
+#PBS -l select=1:ncpus=10:ngpus=1
+#PBS -l walltime=3:00:00
+#PBS -o /mnt/lustre/users/btomkinson/run1/stdoutput.out
+#PBS -e /mnt/lustre/users/btomkinson/run1/stderror.err
+#PBS -m abe -M u18042717@tuks.co.za
+
+cd $PBS_O_WORKDIR
+
+module load chpc/python/3.7.2_gcc-8.2.0
+
+python /mnt/lustre/users/btomkinson/run1/main.py
+

@@ -1,0 +1,23 @@
+1. USE PUTTY (SSH): btomkinson@lengau.chpc.ac.za
+
+2. scp kd.zip btomkinson@scp.chpc.ac.za:/mnt/lustre/users/btomkinson/
+
+3. qsub script.job
+
+EXAMPLE scipt file:
+
+#!/bin/sh
+#PBS -N nameOfTheJob
+#PBS -q gpu_1
+#PBS -P CSCI1166
+#PBS -l select=1:ncpus=10:ngpus=1
+#PBS -l walltime=12:00:00
+#PBS -o /mnt/lustre/users/username/stdoutput.out
+#PBS -e /mnt/lustre/users/username/stderror.err
+#PBS -m abe -M yourEmail@gmail.com
+
+cd $PBS_O_WORKDIR
+
+module load chpc/python/3.6.1_gcc-6.3.0
+
+python /mnt/lustre/users/username/your_puthon_script.py
