@@ -1,23 +1,25 @@
 1. USE PUTTY (SSH): btomkinson@lengau.chpc.ac.za
 
-2. scp kd.zip btomkinson@scp.chpc.ac.za:/mnt/lustre/users/btomkinson/
+2. cd /mnt/lustre/users/btomkinson/
 
-3. qsub script.job
+3. scp kd.zip btomkinson@scp.chpc.ac.za:/mnt/lustre/users/btomkinson/
+
+4. qsub script.job
 
 EXAMPLE scipt file:
 
 #!/bin/sh
-#PBS -N nameOfTheJob
-#PBS -q gpu_1
+#PBS -N KnowledgeDistillation
+#PBS -q serial
 #PBS -P CSCI1166
-#PBS -l select=1:ncpus=10:ngpus=1
-#PBS -l walltime=12:00:00
-#PBS -o /mnt/lustre/users/username/stdoutput.out
-#PBS -e /mnt/lustre/users/username/stderror.err
-#PBS -m abe -M yourEmail@gmail.com
+#PBS -l select=1:ncpus=10:mem=64gb
+#PBS -l walltime=3:00:00
+#PBS -o /mnt/lustre/users/btomkinson/kd_code/stdoutput.out
+#PBS -e /mnt/lustre/users/btomkinson/kd_code/stderror.err
+#PBS -m abe -M u18042717@tuks.co.za
 
-cd $PBS_O_WORKDIR
+cd /mnt/lustre/users/btomkinson/kd_code
 
-module load chpc/python/3.6.1_gcc-6.3.0
+module load chpc/python/3.7.2_gcc-8.2.0
 
-python /mnt/lustre/users/username/your_puthon_script.py
+python /mnt/lustre/users/btomkinson/kd_code/main.py
