@@ -4,6 +4,7 @@ import torchvision
 import torchvision.transforms as transforms
 from os import path
 from torchviz import make_dot
+from torchsummary import summary
 
 from residualblock import ResidualBlock
 from resnet import ResNet
@@ -46,6 +47,22 @@ def getModelWeights(model):
                         c_layers.append(child)
 
     return m_weights, c_layers
+
+
+def printModelSummary(nn_model, firstConvWeight=False, allWeightsShape=False, summaryDisplay=True):
+    if firstConvWeight or allWeightsShape:
+        model_weights, conv_layers = getModelWeights(model)
+        print(f"Total convolution layers: {len(conv_layers)}")
+        print("conv_layers")
+        print(len(conv_layers))
+        if firstConvWeight:
+            print(model_weights[0])
+        if allWeightsShape:
+            for i in range(len(model_weights)):
+                print(model_weights[i].shape)
+
+    if summaryDisplay:
+        summary(nn_model, (3, 32, 32))
 
 
 # For updating learning rate
@@ -100,16 +117,11 @@ if __name__ == '__main__':
 
     # Print model in PDF
     # printModel(model, train_loader)
+    firstConvWeights = False
+    allConvWeightShape = False
+    modelSummary = False
+    printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
 
-    # Get model weights
-    '''
-    model_weights, conv_layers = getModelWeights(model)
-    print(f"Total convolution layers: {len(conv_layers)}")
-    print("conv_layers")
-    print(len(conv_layers))
-    print(model_weights[0])
-    exit()
-    '''
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
