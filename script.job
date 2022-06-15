@@ -10,7 +10,7 @@
 
 cd /mnt/lustre/users/btomkinson/kd_code
 
-module load chpc/python/3.7.2_gcc-8.2.0
+module load chpc/python/anaconda/3-2021.11
+source /mnt/lustre/users/btomkinson/my_envs/firstENV/bin/activate
 
 python /mnt/lustre/users/btomkinson/kd_code/main.py
-

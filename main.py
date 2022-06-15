@@ -60,7 +60,7 @@ if __name__ == '__main__':
 
     # Hyper-parameters
     num_epochs = 8
-    learning_rate = 0.0005
+    learning_rate = 0.001
 
     # Image preprocessing modules
     transform = transforms.Compose([
@@ -108,8 +108,8 @@ if __name__ == '__main__':
     print("conv_layers")
     print(len(conv_layers))
     print(model_weights[0])
+    exit()
     '''
-
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     curr_lr = learning_rate
     for epoch in range(num_epochs):
         for i, (images, labels) in enumerate(train_loader):
-            print("epoch: " + str(i))
+            # print("epoch: " + str(i))
             images = images.to(device)
             labels = labels.to(device)
 
