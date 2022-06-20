@@ -1,5 +1,5 @@
 import torch.nn as nn
-from convolution import conv3x3
+from Convolution import conv3x3
 
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):

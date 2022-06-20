@@ -1,6 +1,6 @@
 
 import torch.nn as nn
-from convolution import conv3x3
+from Convolution import conv3x3
 
 class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes=100):
