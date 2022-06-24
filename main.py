@@ -2,14 +2,17 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
+import numpy as np
 from os import path
+from PIL import Image
+from matplotlib import pyplot as plt
 
 from ResidualBlock import ResidualBlock
 from ResNet import ResNet
-from Train import train_model
+from Train import train_model, getFeatureMaps
 from Test import test_model
 from Augmentation import augment
-from Print import printModel, printModelSummary
+from Print import printModel, printModelSummary, imshow, getModelWeights, printFeatureMaps
 
 if __name__ == '__main__':
     # Device configuration
@@ -55,9 +58,12 @@ if __name__ == '__main__':
     # printModel(model, train_loader)
     firstConvWeights = False
     allConvWeightShape = False
-    modelSummary = True
+    modelSummary = False
     printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
+
+    printFeatureMaps(model, device, train_loader)
     exit()
+
     train_model(model, device, num_epochs, learning_rate, train_loader)
 
     test_model(model, device, test_loader)

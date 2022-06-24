@@ -1,6 +1,25 @@
+import torch
 import torch.nn as nn
 from torchviz import make_dot
 from torchsummary import summary
+import matplotlib.pyplot as plt
+import numpy as np
+
+'''
+dataIter = iter(train_loader)
+imgs, labels = dataIter.next()
+
+for i in range(2):
+    imshow(torchvision.utils.make_grid(imgs[i]))
+'''
+
+
+def imshow(img):
+    img = img / 2 + 0.5
+    np_img = img.numpy()
+    plt.imshow(np.transpose(np_img, (1, 2, 0)))
+    plt.show()
+
 
 def printModel(model, t_loader):
     batch = next(iter(t_loader))
@@ -48,3 +67,46 @@ def printModelSummary(nn_model, firstConvWeight=False, allWeightsShape=False, su
 
     if summaryDisplay:
         summary(nn_model, (3, 32, 32))
+
+
+def printFeatureMaps(model, device, train_loader):
+    dataIter = iter(train_loader)
+    imgs, labels = dataIter.next()
+
+    image = imgs[0]
+
+    print(f"Image shape before: {image.shape}")
+    image = image.unsqueeze(0)
+    print(f"Image shape after: {image.shape}")
+    image = image.to(device)
+
+    outputs = []
+    names = []
+    model_weights, conv_layers = getModelWeights(model)
+
+    for layer in conv_layers[0:]:
+        image = layer(image)
+        outputs.append(image)
+        names.append(str(layer))
+
+    # print(len(outputs))
+    # print feature_maps
+    for feature_map in outputs:
+        print(feature_map.shape)
+
+    processed = []
+    for feature_map in outputs:
+        feature_map = feature_map.squeeze(0)
+        gray_scale = torch.sum(feature_map, 0)
+        gray_scale = gray_scale / feature_map.shape[0]
+        processed.append(gray_scale.data.cpu().numpy())
+    for fm in processed:
+        print(fm.shape)
+
+    fig = plt.figure(figsize=(30, 50))
+    for i in range(len(processed)):
+        a = fig.add_subplot(10, 11, i + 1)
+        imgplot = plt.imshow(processed[i])
+        a.axis("off")
+        a.set_title(names[i].split('(')[0], fontsize=30)
+    plt.savefig(str('feature_maps.jpg'), bbox_inches='tight')
