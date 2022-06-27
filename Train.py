@@ -5,6 +5,7 @@ import torch.nn as nn
 from matplotlib import pyplot as plt
 
 from Print import getModelWeights, printFeatureMaps
+from Test import test_model
 
 
 def update_lr(optimizer, lr):
@@ -39,7 +40,7 @@ def getFeatureMaps(model, device, train_loader):
     return outputs
 
 
-def train_model(model, device, num_epochs, learning_rate, train_loader):
+def train_model(model, device, num_epochs, learning_rate, train_loader, test_loader):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -67,11 +68,27 @@ def train_model(model, device, num_epochs, learning_rate, train_loader):
                 print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
                       .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
 
+        # Test during training
+        print("Training data", end=" ")
+        test_model(model, device, train_loader)
+        print("Testing data", end=" ")
+        test_model(model, device, test_loader)
+
         # Decay learning rate
+        if (epoch + 1) % 20 == 0:
+            curr_lr -= 0.002
+            update_lr(optimizer, curr_lr)
+
+        '''# Decay learning rate
         if (epoch + 1) == 100:
             curr_lr /= 10
             update_lr(optimizer, curr_lr)
 
         elif (epoch + 1) == 150:
             curr_lr /= 10
-            update_lr(optimizer, curr_lr)
+            update_lr(optimizer, curr_lr)'''
+
+    print("This model was trained with the optimizer:", end="")
+    print(type(optimizer).__name__)
+    print(optimizer)
+

@@ -19,8 +19,8 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Hyper-parameters
-    num_epochs = 200
-    learning_rate = 0.1
+    num_epochs = 1
+    learning_rate = 0.01
 
     # Image preprocessing modules
     transform = augment()
@@ -63,9 +63,9 @@ if __name__ == '__main__':
 
     # printFeatureMaps(model, device, train_loader)
 
-    train_model(model, device, num_epochs, learning_rate, train_loader)
+    train_model(model, device, num_epochs, learning_rate, train_loader, test_loader)
 
-    test_model(model, device, test_loader)
+    # test_model(model, device, test_loader)
 
     # Save the model checkpoint
     torch.save(model.state_dict(), 'resnet.ckpt')
