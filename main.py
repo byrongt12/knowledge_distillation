@@ -19,8 +19,8 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Hyper-parameters
-    num_epochs = 8
-    learning_rate = 0.001
+    num_epochs = 200
+    learning_rate = 0.1
 
     # Image preprocessing modules
     transform = augment()
@@ -61,8 +61,7 @@ if __name__ == '__main__':
     modelSummary = False
     printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
 
-    printFeatureMaps(model, device, train_loader)
-    exit()
+    # printFeatureMaps(model, device, train_loader)
 
     train_model(model, device, num_epochs, learning_rate, train_loader)
 

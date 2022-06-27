@@ -39,11 +39,11 @@ def getFeatureMaps(model, device, train_loader):
     return outputs
 
 
-
 def train_model(model, device, num_epochs, learning_rate, train_loader):
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
 
     # Train the model
     total_step = len(train_loader)
@@ -68,6 +68,10 @@ def train_model(model, device, num_epochs, learning_rate, train_loader):
                       .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
 
         # Decay learning rate
-        if (epoch + 1) % 20 == 0:
-            curr_lr /= 3
+        if (epoch + 1) == 100:
+            curr_lr /= 10
+            update_lr(optimizer, curr_lr)
+
+        elif (epoch + 1) == 150:
+            curr_lr /= 10
             update_lr(optimizer, curr_lr)
