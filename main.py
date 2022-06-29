@@ -1,9 +1,6 @@
 import torch
-import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-import numpy as np
-from os import path
 
 from ResidualBlock import ResidualBlock
 from ResNet import ResNet
@@ -39,17 +36,16 @@ if __name__ == '__main__':
                                               shuffle=False)
 
     # RESNET 110
-    chk_path = "./resnet.ckpt"
+
+    '''chk_path = "./resnet.ckpt"
     if path.exists(chk_path):
         print("load model")
         model = ResNet(ResidualBlock, [18, 18, 18]).to(device)
         model.load_state_dict(torch.load(chk_path))
-    else:
-        print("build model")
-        model = ResNet(ResidualBlock, [18, 18, 18]).to(device)
+    else:'''
+    print("build model")
+    model = ResNet(ResidualBlock, [18, 18, 18]).to(device)
 
-    # Print model in PDF
-    # printModel(model, train_loader)
     firstConvWeights = False
     allConvWeightShape = False
     modelSummary = False
