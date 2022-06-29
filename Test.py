@@ -16,4 +16,4 @@ def test_model(model, device, loader):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-        print('Accuracy: {} %'.format(100 * correct / total))
+        print('accuracy: {} %'.format(100 * correct / total))

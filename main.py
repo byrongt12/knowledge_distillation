@@ -4,8 +4,6 @@ import torchvision
 import torchvision.transforms as transforms
 import numpy as np
 from os import path
-from PIL import Image
-from matplotlib import pyplot as plt
 
 from ResidualBlock import ResidualBlock
 from ResNet import ResNet
@@ -17,10 +15,6 @@ from Print import printModel, printModelSummary, imshow, getModelWeights, printF
 if __name__ == '__main__':
     # Device configuration
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    # Hyper-parameters
-    num_epochs = 1
-    learning_rate = 0.01
 
     # Image preprocessing modules
     transform = augment()
@@ -37,11 +31,11 @@ if __name__ == '__main__':
 
     # Data loader
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=100,
+                                               batch_size=128,
                                                shuffle=True)
 
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                              batch_size=100,
+                                              batch_size=128,
                                               shuffle=False)
 
     # RESNET 110
@@ -61,9 +55,7 @@ if __name__ == '__main__':
     modelSummary = False
     printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
 
-    # printFeatureMaps(model, device, train_loader)
-
-    train_model(model, device, num_epochs, learning_rate, train_loader, test_loader)
+    train_model(model, device, train_loader, test_loader)
 
     # test_model(model, device, test_loader)
 

@@ -1,9 +1,6 @@
 import torch
 import torch.nn as nn
 
-# For updating learning rate
-from matplotlib import pyplot as plt
-
 from Print import getModelWeights, printFeatureMaps
 from Test import test_model
 
@@ -40,11 +37,15 @@ def getFeatureMaps(model, device, train_loader):
     return outputs
 
 
-def train_model(model, device, num_epochs, learning_rate, train_loader, test_loader):
+def train_model(model, device, train_loader, test_loader):
+    # Hyper-parameters
+    num_epochs = 80
+    learning_rate = 0.01
+
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
-    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
+    optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0003)
 
     # Train the model
     total_step = len(train_loader)
@@ -74,21 +75,15 @@ def train_model(model, device, num_epochs, learning_rate, train_loader, test_loa
         print("Testing data", end=" ")
         test_model(model, device, test_loader)
 
-        # Decay learning rate
-        if (epoch + 1) % 20 == 0:
-            curr_lr -= 0.002
-            update_lr(optimizer, curr_lr)
-
         '''# Decay learning rate
-        if (epoch + 1) == 100:
-            curr_lr /= 10
-            update_lr(optimizer, curr_lr)
-
-        elif (epoch + 1) == 150:
-            curr_lr /= 10
+        if (epoch + 1) % 15 == 0:
+            curr_lr /= 5
             update_lr(optimizer, curr_lr)'''
 
-    print("This model was trained with the optimizer:", end="")
-    print(type(optimizer).__name__)
-    print(optimizer)
+        # Decay learning rate
+        if (epoch + 1) % 20 == 0:
+            curr_lr /= 5
+            update_lr(optimizer, curr_lr)
 
+    print("This model was trained with the optimizer:")
+    print(optimizer)
