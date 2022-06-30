@@ -6,7 +6,7 @@ from ResidualBlock import ResidualBlock
 from ResNet import ResNet
 from Train import train_model, getFeatureMaps
 from Test import test_model
-from Augmentation import augment
+from Augmentation import transformTrainData, transformTestData
 from Print import printModel, printModelSummary, imshow, getModelWeights, printFeatureMaps
 
 if __name__ == '__main__':
@@ -14,25 +14,26 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Image preprocessing modules
-    transform = augment()
+    transformTrainData = transformTrainData()
+    transformTestData = transformTestData()
 
     # CIFAR-100 dataset
     train_dataset = torchvision.datasets.CIFAR100(root='./data/',
                                                   train=True,
-                                                  transform=transform,
+                                                  transform=transformTrainData,
                                                   download=True)
 
     test_dataset = torchvision.datasets.CIFAR100(root='./data/',
                                                  train=False,
-                                                 transform=transforms.ToTensor())
+                                                 transform=transformTestData)
 
     # Data loader
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=128,
+                                               batch_size=100,
                                                shuffle=True)
 
     test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                              batch_size=128,
+                                              batch_size=100,
                                               shuffle=False)
 
     # RESNET 110
