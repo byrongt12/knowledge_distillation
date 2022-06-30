@@ -40,7 +40,7 @@ def getFeatureMaps(model, device, train_loader):
 def train_model(model, device, train_loader, test_loader):
     # Hyper-parameters
     num_epochs = 80
-    learning_rate = 0.05
+    learning_rate = 0.1
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
@@ -77,6 +77,8 @@ def train_model(model, device, train_loader, test_loader):
             # Backward and optimize
             optimizer.zero_grad()
             loss.backward()
+            clip_value = 5
+            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
             optimizer.step()
 
             if (i + 1) % 100 == 0:
