@@ -4,6 +4,18 @@ import torch.nn as nn
 from Print import getModelWeights, printFeatureMaps
 from Test import test_model
 
+# Speed up training
+torch.autograd.set_detect_anomaly(False)
+torch.autograd.profiler.profile(False)
+torch.autograd.profiler.emit_nvtx(False)
+torch.backends.cudnn.benchmark = True
+
+
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
+
 
 def update_lr(optimizer, lr):
     for param_group in optimizer.param_groups:
@@ -38,14 +50,16 @@ def getFeatureMaps(model, device, train_loader):
 
 
 def train_model(model, device, train_loader, test_loader):
+    # initialize weights
+    model.apply(init_weights)
     # Hyper-parameters
-    num_epochs = 80
-    learning_rate = 0.1
+    num_epochs = 120
+    learning_rate = 0.002
 
     # Loss and optimizer
     criterion = nn.CrossEntropyLoss()
 
-    optimizerType = "sgd"
+    optimizerType = "adam"
 
     if optimizerType == "adam":
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
@@ -74,8 +88,11 @@ def train_model(model, device, train_loader, test_loader):
             outputs = model(images)
             loss = criterion(outputs, labels)
 
-            # Backward and optimize
-            optimizer.zero_grad()
+            # Backward and optimize:
+            # zero gradients a faster way
+            for param in model.parameters():
+                param.grad = None
+
             loss.backward()
             clip_value = 5
             torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
@@ -98,8 +115,6 @@ def train_model(model, device, train_loader, test_loader):
             update_lr(optimizer, curr_lr)'''
 
         # Decay learning rate
-        if (epoch + 1) % 25 == 0:
+        if (epoch + 1) == 80 or (epoch + 1) == 100:
             curr_lr /= 10
             update_lr(optimizer, curr_lr)
-
-
