@@ -90,7 +90,7 @@ def train_model(epochs, train_dl, test_dl, model, optimizer, max_lr, weight_deca
 
             scheduler.step()
             lrs.append(get_lr(optimizer))
-            
+
         result = evaluate(model, test_dl)
         result["train_loss"] = torch.stack(train_loss).mean().item()
         result["train_acc"] = torch.stack(train_acc).mean().item()

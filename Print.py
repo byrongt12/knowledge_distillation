@@ -26,7 +26,8 @@ def imshow(img):
 def printModel(model, t_loader):
     batch = next(iter(t_loader))
     yhat = model(batch[0].cuda())  # Give dummy batch to forward()
-    make_dot(yhat, params=dict(list(model.named_parameters()))).render("rnn_torchviz.png")
+    make_dot(yhat, params=dict(list(model.named_parameters()))).render("print/rnn_torchviz")
+    print("Model printed.")
 
 
 def getModelWeights(model):
@@ -77,9 +78,9 @@ def printFeatureMaps(model, device, train_loader):
 
     image = imgs[0]
 
-    print(f"Image shape before: {image.shape}")
+    # print(f"Image shape before: {image.shape}")
     image = image.unsqueeze(0)
-    print(f"Image shape after: {image.shape}")
+    # print(f"Image shape after: {image.shape}")
     image = image.to(device)
 
     outputs = []
@@ -93,8 +94,8 @@ def printFeatureMaps(model, device, train_loader):
 
     # print(len(outputs))
     # print feature_maps
-    for feature_map in outputs:
-        print(feature_map.shape)
+    # for feature_map in outputs:
+    #    print(feature_map.shape)
 
     processed = []
     for feature_map in outputs:
@@ -102,8 +103,8 @@ def printFeatureMaps(model, device, train_loader):
         gray_scale = torch.sum(feature_map, 0)
         gray_scale = gray_scale / feature_map.shape[0]
         processed.append(gray_scale.data.cpu().numpy())
-    for fm in processed:
-        print(fm.shape)
+    # for fm in processed:
+    #    print(fm.shape)
 
     fig = plt.figure(figsize=(30, 50))
     for i in range(len(processed)):
@@ -111,7 +112,8 @@ def printFeatureMaps(model, device, train_loader):
         imgplot = plt.imshow(processed[i])
         a.axis("off")
         a.set_title(names[i].split('(')[0], fontsize=30)
-    plt.savefig(str('feature_maps.jpg'), bbox_inches='tight')
+    plt.savefig(str('print/feature_maps.jpg'), bbox_inches='tight')
+    print("Feature maps printed.")
 
 
 def show_batch(dl):

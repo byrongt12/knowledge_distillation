@@ -6,7 +6,7 @@ from torchvision.datasets import CIFAR100
 
 from Augmentation import transformTrainData, transformTestData
 from DeviceLoader import get_device, to_device, ToDeviceLoader
-from Print import printModelSummary, plot_acc
+from Print import printModelSummary, plot_acc, printFeatureMaps, printModel
 from ResNet import ResNet
 from ResidualBlock import ResidualBlock
 from Train import train_model, evaluate
