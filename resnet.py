@@ -1,8 +1,10 @@
 
 import torch.nn as nn
+
+from BaseModel import BaseModel
 from Convolution import conv3x3
 
-class ResNet(nn.Module):
+class ResNet(BaseModel):
     def __init__(self, block, layers, num_classes=100):
         super(ResNet, self).__init__()
         self.in_channels = 16

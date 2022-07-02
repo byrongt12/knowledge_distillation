@@ -1,5 +1,7 @@
+import pylab as pl
 import torch
 import torch.nn as nn
+from torchvision.utils import make_grid
 from torchviz import make_dot
 from torchsummary import summary
 import matplotlib.pyplot as plt
@@ -110,3 +112,35 @@ def printFeatureMaps(model, device, train_loader):
         a.axis("off")
         a.set_title(names[i].split('(')[0], fontsize=30)
     plt.savefig(str('feature_maps.jpg'), bbox_inches='tight')
+
+
+def show_batch(dl):
+    for batch in dl:
+        images, labels = batch
+        fig, ax = plt.subplots(figsize=(7.5, 7.5))
+        ax.set_yticks([])
+        ax.set_xticks([])
+        ax.imshow(make_grid(images[:20], nrow=5).permute(1, 2, 0))
+        pl.show()
+        break
+
+
+def plot_acc(history):
+    plt.plot([x["val_acc"] for x in history], "-x")
+    plt.xlabel("Epoch")
+    plt.ylabel("Accuracy")
+    plt.show()
+
+def plot_loss(history):
+    plt.plot([x.get("train_loss") for x in history], "-bx")
+    plt.plot([x["val_loss"] for x in history], "-rx")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.legend(["train loss", "val loss"])
+    plt.show()
+
+def plot_lrs(history):
+    plt.plot(np.concatenate([x.get("lrs", []) for x in history]))
+    plt.xlabel("Batch number")
+    plt.ylabel("Learning rate")
+    plt.show()

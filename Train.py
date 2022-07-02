@@ -49,72 +49,54 @@ def getFeatureMaps(model, device, train_loader):
     return outputs
 
 
-def train_model(model, device, train_loader, test_loader):
-    # initialize weights
-    model.apply(init_weights)
-    # Hyper-parameters
-    num_epochs = 120
-    learning_rate = 0.002
+def evaluate(model, test_dl):
+    model.eval()
+    outputs = [model.validation_step(batch) for batch in test_dl]
+    return model.validation_epoch_end(outputs)
 
-    # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
 
-    optimizerType = "adam"
+def get_lr(optimizer):
+    for param_group in optimizer.param_groups:
+        return param_group['lr']
 
-    if optimizerType == "adam":
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=0.0001)
-    elif optimizerType == "sgd":
-        optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0002)
-    else:
-        optimizer = None
-        print("Please select correct optimizer type.")
-        exit()
 
-    print("Starting training with:")
-    print("Epochs: " + str(num_epochs))
-    print("Learning rate: " + str(learning_rate))
-    print(optimizer)
+def train_model(epochs, train_dl, test_dl, model, optimizer, max_lr, weight_decay, scheduler, grad_clip=None):
+    torch.cuda.empty_cache()
+    history = []
 
-    # Train the model
-    total_step = len(train_loader)
-    curr_lr = learning_rate
-    for epoch in range(num_epochs):
-        for i, (images, labels) in enumerate(train_loader):
-            # print("epoch: " + str(i))
-            images = images.to(device)
-            labels = labels.to(device)
+    optimizer = optimizer(model.parameters(), max_lr, weight_decay=weight_decay)
+    scheduler = scheduler(optimizer, max_lr, epochs=epochs, steps_per_epoch=len(train_dl))
 
-            # Forward pass
-            outputs = model(images)
-            loss = criterion(outputs, labels)
+    for epoch in range(epochs):
+        model.train()  # put the model in train mode
+        train_loss = []
+        train_acc = []
+        lrs = []
 
-            # Backward and optimize:
-            # zero gradients a faster way
+        for batch in train_dl:
+            loss, acc = model.training_step(batch)
+            train_loss.append(loss)
+            train_acc.append(acc)
+
+            loss.backward()
+
+            if grad_clip:
+                nn.utils.clip_grad_value_(model.parameters(), grad_clip)
+
+            optimizer.step()
+            # optimizer.zero_grad()
             for param in model.parameters():
                 param.grad = None
 
-            loss.backward()
-            clip_value = 5
-            torch.nn.utils.clip_grad_norm_(model.parameters(), clip_value)
-            optimizer.step()
+            scheduler.step()
+            lrs.append(get_lr(optimizer))
+            
+        result = evaluate(model, test_dl)
+        result["train_loss"] = torch.stack(train_loss).mean().item()
+        result["train_acc"] = torch.stack(train_acc).mean().item()
+        result["lrs"] = lrs
 
-            if (i + 1) % 100 == 0:
-                print("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
-                      .format(epoch + 1, num_epochs, i + 1, total_step, loss.item()))
+        model.epoch_end(epoch, result)
+        history.append(result)
 
-        if (epoch + 1) % 2 == 0:
-            # Test during training
-            print("Training data", end=" ")
-            test_model(model, device, train_loader)
-            print("Testing data", end=" ")
-            test_model(model, device, test_loader)
-
-        '''# Decay learning rate
-        if (epoch + 1) % 15 == 0:
-            curr_lr /= 5
-            update_lr(optimizer, curr_lr)'''
-
-        # Decay learning rate
-        if (epoch + 1) == 80 or (epoch + 1) == 100:
-            curr_lr /= 10
-            update_lr(optimizer, curr_lr)
+    return history

@@ -1,60 +1,65 @@
-import torch
-import torchvision
-import torchvision.transforms as transforms
+from os import path
 
-from ResidualBlock import ResidualBlock
-from ResNet import ResNet
-from Train import train_model, getFeatureMaps
-from Test import test_model
+import torch
+from torch.utils.data.dataloader import DataLoader
+from torchvision.datasets import CIFAR100
+
 from Augmentation import transformTrainData, transformTestData
-from Print import printModel, printModelSummary, imshow, getModelWeights, printFeatureMaps
+from DeviceLoader import get_device, to_device, ToDeviceLoader
+from Print import printModelSummary, plot_acc
+from ResNet import ResNet
+from ResidualBlock import ResidualBlock
+from Train import train_model, evaluate
 
 if __name__ == '__main__':
     # Device configuration
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = get_device()
 
     # Image preprocessing modules
     transformTrainData = transformTrainData()
     transformTestData = transformTestData()
 
     # CIFAR-100 dataset
-    train_dataset = torchvision.datasets.CIFAR100(root='./data/',
-                                                  train=True,
-                                                  transform=transformTrainData,
-                                                  download=True)
-
-    test_dataset = torchvision.datasets.CIFAR100(root='./data/',
-                                                 train=False,
-                                                 transform=transformTestData)
+    BATCH_SIZE = 100
+    train_dataset = CIFAR100(root='./data/', train=True, transform=transformTrainData, download=True)
+    test_dataset = CIFAR100(root='./data/', train=False, transform=transformTestData)
 
     # Data loader
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-                                               batch_size=100,
-                                               shuffle=True)
-
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-                                              batch_size=100,
-                                              shuffle=False)
+    train_dl = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, )
+    test_dl = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, )
 
     # RESNET 110
-
-    '''chk_path = "./resnet.ckpt"
+    chk_path = "./resnet110.ckpt"
     if path.exists(chk_path):
         print("load model")
-        model = ResNet(ResidualBlock, [18, 18, 18]).to(device)
+        model = ResNet(ResidualBlock, [18, 18, 18])
         model.load_state_dict(torch.load(chk_path))
-    else:'''
-    print("build model")
-    model = ResNet(ResidualBlock, [18, 18, 18]).to(device)
+    else:
+        print("build model")
+        model = ResNet(ResidualBlock, [18, 18, 18])
+
+    model = to_device(model, device)
+    train_dl = ToDeviceLoader(train_dl, device)
+    test_dl = ToDeviceLoader(test_dl, device)
 
     firstConvWeights = False
     allConvWeightShape = False
     modelSummary = False
     printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
 
-    train_model(model, device, train_loader, test_loader)
+    epochs = 3
+    optimizer = torch.optim.Adam
+    max_lr = 0.01
+    grad_clip = 0.1
+    weight_decay = 1e-4
+    scheduler = torch.optim.lr_scheduler.OneCycleLR
 
-    # test_model(model, device, test_loader)
+    history = [evaluate(model, test_dl)]
+    history += train_model(epochs=epochs, train_dl=train_dl, test_dl=test_dl, model=model, optimizer=optimizer,
+                           max_lr=max_lr,
+                           grad_clip=grad_clip, weight_decay=weight_decay,
+                           scheduler=torch.optim.lr_scheduler.OneCycleLR)
 
+    plot_acc(history)
     # Save the model checkpoint
-    torch.save(model.state_dict(), 'resnet.ckpt')
+    torch.save(model.state_dict(), 'resnet110.ckpt')
