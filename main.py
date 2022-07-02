@@ -6,7 +6,7 @@ from torchvision.datasets import CIFAR100
 
 from Augmentation import transformTrainData, transformTestData
 from DeviceLoader import get_device, to_device, ToDeviceLoader
-from Print import printModelSummary, plot_acc, printFeatureMaps, printModel
+from Print import printModelSummary, plot_acc, printFeatureMaps, printModel, show_batch
 from ResNet import ResNet
 from ResidualBlock import ResidualBlock
 from Train import train_model, evaluate
@@ -28,15 +28,18 @@ if __name__ == '__main__':
     train_dl = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, )
     test_dl = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, )
 
+    '''show_batch(train_dl)
+    exit()'''
+
     # RESNET 110
-    chk_path = "./resnet110.ckpt"
+    '''chk_path = "./resnet110.ckpt"
     if path.exists(chk_path):
         print("load model")
         model = ResNet(ResidualBlock, [18, 18, 18])
         model.load_state_dict(torch.load(chk_path))
-    else:
-        print("build model")
-        model = ResNet(ResidualBlock, [18, 18, 18])
+    else:'''
+    print("build model")
+    model = ResNet(ResidualBlock, [18, 18, 18])
 
     model = to_device(model, device)
     train_dl = ToDeviceLoader(train_dl, device)
@@ -47,7 +50,7 @@ if __name__ == '__main__':
     modelSummary = False
     printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
 
-    epochs = 3
+    epochs = 80
     optimizer = torch.optim.Adam
     max_lr = 0.01
     grad_clip = 0.1
@@ -59,6 +62,14 @@ if __name__ == '__main__':
                            max_lr=max_lr,
                            grad_clip=grad_clip, weight_decay=weight_decay,
                            scheduler=torch.optim.lr_scheduler.OneCycleLR)
+
+    print("Hyper parameters:")
+    print("Number of epochs: " + str(epochs))
+    print("Optimizer: " + str(optimizer))
+    print("max learning rate: " + str(max_lr))
+    print("gradient clip value: " + str(grad_clip))
+    print("weight decay: " + str(weight_decay))
+    print("scheduler: " + str(scheduler))
 
     plot_acc(history)
     # Save the model checkpoint

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 
 from Print import getModelWeights, printFeatureMaps
-from Test import test_model
 
 # Speed up training
 torch.autograd.set_detect_anomaly(False)
