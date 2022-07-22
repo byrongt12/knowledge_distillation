@@ -25,8 +25,8 @@ if __name__ == '__main__':
     test_dataset = CIFAR100(root='./data/', train=False, transform=transformTestData)
 
     # Data loader
-    train_dl = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True, )
-    test_dl = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, pin_memory=True, )
+    train_dl = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    test_dl = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
     '''show_batch(train_dl)
     exit()'''
@@ -50,9 +50,10 @@ if __name__ == '__main__':
     modelSummary = False
     printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
 
-    epochs = 80
+    epochs = 180
     optimizer = torch.optim.Adam
-    max_lr = 0.01
+    max_lr = 0.003
+
     grad_clip = 0.1
     weight_decay = 1e-4
     scheduler = torch.optim.lr_scheduler.OneCycleLR
@@ -61,15 +62,18 @@ if __name__ == '__main__':
     history += train_model(epochs=epochs, train_dl=train_dl, test_dl=test_dl, model=model, optimizer=optimizer,
                            max_lr=max_lr,
                            grad_clip=grad_clip, weight_decay=weight_decay,
-                           scheduler=torch.optim.lr_scheduler.OneCycleLR)
+                           scheduler=scheduler)
 
     print("Hyper parameters:")
     print("Number of epochs: " + str(epochs))
+    print("Batch size: " + str(BATCH_SIZE))
     print("Optimizer: " + str(optimizer))
-    print("max learning rate: " + str(max_lr))
-    print("gradient clip value: " + str(grad_clip))
-    print("weight decay: " + str(weight_decay))
-    print("scheduler: " + str(scheduler))
+    print("Max learning rate: " + str(max_lr))
+    print("Gradient clip value: " + str(grad_clip))
+    print("Weight decay: " + str(weight_decay))
+    print("Scheduler: " + str(scheduler))
+    print("Transforms: ", end="")
+    print(transformTrainData)
 
     plot_acc(history)
     # Save the model checkpoint
