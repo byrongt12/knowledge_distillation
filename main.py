@@ -1,15 +1,19 @@
 from os import path
 
 import torch
+from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from torchvision.datasets import CIFAR100
+import torch.nn.functional as F
 
 from Augmentation import transformTrainData, transformTestData
 from DeviceLoader import get_device, to_device, ToDeviceLoader
+from Helper import getNumberOfConvolutionLayers
 from Print import printModelSummary, plot_acc, printFeatureMaps, printModel, show_batch
 from ResNet import ResNet
 from ResidualBlock import ResidualBlock
-from Train import train_model, evaluate
+from Train import train_model, evaluate, train_model_with_distillation
+from Helper import getFeatureMaps
 
 if __name__ == '__main__':
     # Device configuration
@@ -32,25 +36,33 @@ if __name__ == '__main__':
     exit()'''
 
     # RESNET 110
-    '''chk_path = "./resnet110.ckpt"
+    chk_path = "./resnet110_0.7018.ckpt"
+    teacher_model = None
     if path.exists(chk_path):
-        print("load model")
-        model = ResNet(ResidualBlock, [18, 18, 18])
-        model.load_state_dict(torch.load(chk_path))
-    else:'''
-    print("build model")
-    model = ResNet(ResidualBlock, [18, 18, 18])
+        print("Loaded teacher model.")
+        teacher_model = ResNet(ResidualBlock, [18, 18, 18])  # ResNet 110
+        teacher_model.load_state_dict(torch.load(chk_path))
+    else:
+        print("No teacher model found.")
+        exit()
 
-    model = to_device(model, device)
+    student_model_number = 3
+    student_model = ResNet(ResidualBlock, [3, 3, 3])  # ResNet 20
+
+    teacher_model = to_device(teacher_model, device)
+    student_model = to_device(student_model, device)
     train_dl = ToDeviceLoader(train_dl, device)
     test_dl = ToDeviceLoader(test_dl, device)
 
-    firstConvWeights = False
-    allConvWeightShape = False
-    modelSummary = False
-    printModelSummary(model, firstConvWeights, allConvWeightShape, modelSummary)
+    # Train student:
 
-    epochs = 180
+    '''firstConvWeights = False
+    allConvWeightShape = False
+    modelSummary = True
+    printModelSummary(student_model, firstConvWeights, allConvWeightShape, modelSummary)
+    exit()'''
+
+    epochs = 20
     optimizer = torch.optim.Adam
     max_lr = 0.003
 
@@ -58,11 +70,19 @@ if __name__ == '__main__':
     weight_decay = 1e-4
     scheduler = torch.optim.lr_scheduler.OneCycleLR
 
-    history = [evaluate(model, test_dl)]
-    history += train_model(epochs=epochs, train_dl=train_dl, test_dl=test_dl, model=model, optimizer=optimizer,
-                           max_lr=max_lr,
-                           grad_clip=grad_clip, weight_decay=weight_decay,
-                           scheduler=scheduler)
+    history = [evaluate(student_model, test_dl)]
+
+    numOfFeatureMapsForTeacher = getNumberOfConvolutionLayers(teacher_model)
+    numOfFeatureMapsForStudent = getNumberOfConvolutionLayers(student_model)
+
+    # Get GA string and pass to function below.
+
+    history += train_model_with_distillation(epochs=epochs, train_dl=train_dl, test_dl=test_dl,
+                                             student_model=student_model, student_model_number=student_model_number, teacher_model=teacher_model, device=device,
+                                             optimizer=optimizer,
+                                             max_lr=max_lr,
+                                             grad_clip=grad_clip, weight_decay=weight_decay,
+                                             scheduler=scheduler)
 
     print("Hyper parameters:")
     print("Number of epochs: " + str(epochs))
@@ -77,4 +97,4 @@ if __name__ == '__main__':
 
     plot_acc(history)
     # Save the model checkpoint
-    torch.save(model.state_dict(), 'resnet110.ckpt')
+    torch.save(student_model.state_dict(), 'resnet20.ckpt')

@@ -1,20 +1,13 @@
 import pylab as pl
 import torch
-import torch.nn as nn
+
 from torchvision.utils import make_grid
 from torchviz import make_dot
 from torchsummary import summary
 import matplotlib.pyplot as plt
 import numpy as np
 
-'''
-dataIter = iter(train_loader)
-imgs, labels = dataIter.next()
-
-for i in range(2):
-    imshow(torchvision.utils.make_grid(imgs[i]))
-'''
-
+from Helper import getModelWeights
 
 def imshow(img):
     img = img / 2 + 0.5
@@ -26,35 +19,8 @@ def imshow(img):
 def printModel(model, t_loader):
     batch = next(iter(t_loader))
     yhat = model(batch[0].cuda())  # Give dummy batch to forward()
-    make_dot(yhat, params=dict(list(model.named_parameters()))).render("print/rnn_torchviz")
+    make_dot(yhat, params=dict(list(model.named_parameters()))).render("print/rnn_torchviz_student")
     print("Model printed.")
-
-
-def getModelWeights(model):
-    # save the convolutional layer weights
-    m_weights = []
-    # save the convolutional layers
-    c_layers = []
-    # get all the model children as list
-    model_children = list(model.children())
-    # counter to keep count of the conv layers
-    counter = 0
-
-    for i in range(len(model_children)):
-        if type(model_children[i]) == nn.Conv2d:
-            counter += 1
-            m_weights.append(model_children[i].weight)
-            c_layers.append(model_children[i])
-        elif type(model_children[i]) == nn.Sequential:
-            for j in range(len(model_children[i])):
-                for child in model_children[i][j].children():
-                    if type(child) == nn.Conv2d:
-                        counter += 1
-                        m_weights.append(child.weight)
-                        c_layers.append(child)
-
-    return m_weights, c_layers
-
 
 def printModelSummary(nn_model, firstConvWeight=False, allWeightsShape=False, summaryDisplay=True):
     if firstConvWeight or allWeightsShape:
@@ -74,7 +40,7 @@ def printModelSummary(nn_model, firstConvWeight=False, allWeightsShape=False, su
 
 def printFeatureMaps(model, device, train_loader):
     dataIter = iter(train_loader)
-    imgs, labels = dataIter.next()
+    imgs, labels = next(dataIter)
 
     image = imgs[0]
 
