@@ -37,7 +37,6 @@ def printModelSummary(nn_model, firstConvWeight=False, allWeightsShape=False, su
     if summaryDisplay:
         summary(nn_model, (3, 32, 32))
 
-
 def printFeatureMaps(model, device, train_loader):
     dataIter = iter(train_loader)
     imgs, labels = next(dataIter)

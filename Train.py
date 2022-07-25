@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from Helper import getModelWeights, getFeatureMaps
+from Helper import getModelWeights, getFeatureMaps, distill
 from Print import printFeatureMaps
 
 # Speed up training
@@ -112,57 +112,9 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             # For each batch, step through GA string.
 
             featureMapNumForTeacher = 56
-            featureMapNumForStudent = 2
+            featureMapNumForStudent = 1
 
-            images, labels = batch
-
-            for image in images:
-                featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
-                featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
-
-                # print(featureMapForTeacher.size())
-                # print(featureMapForStudent.size())
-
-                # HERE
-                layer = None
-                block = None
-                conv = None
-
-                divisor = student_model_number * 2
-                quotient = featureMapNumForStudent // divisor
-                if featureMapNumForStudent % divisor == 0:
-                    layer = quotient
-                else:
-                    layer = quotient + 1
-
-                if featureMapNumForStudent % divisor == 0:
-                    block = student_model_number
-                    conv = 2
-                else:
-                    if (featureMapNumForStudent % divisor) % 2 == 0:
-                        block = ((featureMapNumForStudent % divisor) // 2)
-                    else:
-                        block = ((featureMapNumForStudent % divisor) // 2) + 1
-
-                if conv is None:
-                    if ((featureMapNumForStudent % divisor) % 2) == 0:
-                        conv = 2
-                    else:
-                        conv = 1
-
-                print(layer)
-                print(block)
-                print(conv)
-
-                distill_optimizer = torch.optim.SGD(list(student_model.layer2[0].conv2.parameters()), lr=0.3)  # The 8th conv layer.
-
-                distill_loss = F.cosine_similarity(featureMapForStudent.reshape(1, -1),
-                                                   featureMapForTeacher.reshape(1, -1))
-
-                distill_loss.backward()
-                distill_optimizer.step()
-                distill_optimizer.zero_grad()
-                break
+            distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_model, student_model,student_model_number, batch)
 
             '''# Step scheduler
             scheduler.step()

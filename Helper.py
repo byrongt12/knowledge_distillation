@@ -1,4 +1,8 @@
+import torch  # need this for eval function
 import torch.nn as nn
+import torch.nn.functional as F
+from matplotlib import pyplot as plt
+import torchvision.transforms as transforms
 
 
 def getModelWeights(model):
@@ -57,3 +61,98 @@ def getFeatureMaps(model, device, image):
     #     print(feature_map.shape)
 
     return outputs
+
+def printSingularFeatureMap(featureMap):
+    feature_map = featureMap.squeeze(0)
+    gray_scale = torch.sum(feature_map, 0)
+    gray_scale = gray_scale / feature_map.shape[0]
+
+    plt.imshow(gray_scale.data.cpu().numpy())
+    plt.show()
+
+def distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_model, student_model, student_model_number, batch):
+
+    student_model.train()  # put the model in train mode
+
+    # Get optimizer set up for the student model.
+
+    layer = None
+    block = None
+    conv = None
+
+    divisor = student_model_number * 2
+    quotient = featureMapNumForStudent // divisor
+    if featureMapNumForStudent % divisor == 0:
+        layer = quotient
+    else:
+        layer = quotient + 1
+
+    if featureMapNumForStudent % divisor == 0:
+        block = student_model_number
+        conv = 2
+    else:
+        if (featureMapNumForStudent % divisor) % 2 == 0:
+            block = ((featureMapNumForStudent % divisor) // 2)
+        else:
+            block = ((featureMapNumForStudent % divisor) // 2) + 1
+
+    if conv is None:
+        if ((featureMapNumForStudent % divisor) % 2) == 0:
+            conv = 2
+        else:
+            conv = 1
+
+    '''print(layer)
+    print(block)
+    print(conv)'''
+
+    if layer is None or block is None or conv is None:
+        print("Layer or block or conv is Null")
+        exit()
+
+    executeStr = 'torch.optim.SGD(list(student_model.layer' + str(layer) + '[' + str(block - 1) + '].conv' + str(
+        conv) + '.parameters()), lr=0.3)'
+    # torch.optim.SGD(list(student_model.layer2[0].conv2.parameters()), lr=0.3)  # The 8th conv layer.
+
+    distill_optimizer = eval(executeStr)
+
+    images, labels = batch
+
+    for image in images:
+        featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
+        featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
+
+        # If matrices have different shapes always downsize to the small one.
+        if featureMapForTeacher.size() != featureMapForStudent.size():
+
+            torch.set_printoptions(profile="full")
+            print(featureMapForTeacher.size())
+            print(featureMapForStudent.size())
+
+            print(featureMapForTeacher)
+            print(featureMapForStudent)
+
+            A = featureMapForTeacher
+            B = featureMapForStudent
+
+            if A.size() < B.size():  # if the total student tensor is bigger but individual size of inner tensors will
+                # be smaller
+                print("student smaller inner")
+                #transforms.Resize(size=
+            elif A.size() > B.size():  # if the total teacher tensor is bigger but individual size of inner tensors will
+                # be smaller
+                print("teacher smaller inner")
+
+            printSingularFeatureMap(featureMapForStudent)
+            print("Now teacher")
+            printSingularFeatureMap(featureMapForTeacher)
+
+            exit()
+
+        distill_loss = F.cosine_similarity(featureMapForStudent.reshape(1, -1),
+                                           featureMapForTeacher.reshape(1, -1))
+
+        distill_loss.backward()
+        distill_optimizer.step()
+        distill_optimizer.zero_grad()
+        break
