@@ -112,7 +112,7 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             # For each batch, step through GA string.
 
             featureMapNumForTeacher = 56
-            featureMapNumForStudent = 1
+            featureMapNumForStudent = 8
 
             distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_model, student_model,student_model_number, batch)
 

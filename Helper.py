@@ -122,36 +122,32 @@ def distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_mo
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
-        # If matrices have different shapes always downsize to the small one.
+        A = featureMapForTeacher.detach().clone()
+        B = featureMapForStudent.detach().clone()
+
+        # If matrices have different shapes: downsize to small one + shave off values make matrix size identical.
         if featureMapForTeacher.size() != featureMapForStudent.size():
 
-            torch.set_printoptions(profile="full")
-            print(featureMapForTeacher.size())
-            print(featureMapForStudent.size())
+            '''torch.set_printoptions(profile="full")
+            print(A)
+            print(B)
 
-            print(featureMapForTeacher)
-            print(featureMapForStudent)
+            print(A.size())
+            print(B.size())'''
 
-            A = featureMapForTeacher
-            B = featureMapForStudent
+            if A.size() < B.size():  # if the total Student tensor is bigger but inner tensors smaller
+                A = transforms.functional.resize(A, B.size()[3])
+                B = B.narrow(1, 0, A.size()[1])
 
-            if A.size() < B.size():  # if the total student tensor is bigger but individual size of inner tensors will
-                # be smaller
-                print("student smaller inner")
-                #transforms.Resize(size=
-            elif A.size() > B.size():  # if the total teacher tensor is bigger but individual size of inner tensors will
-                # be smaller
-                print("teacher smaller inner")
+            elif A.size() > B.size():  # if the total Teacher tensor is bigger but inner tensors smaller
+                B = transforms.functional.resize(B, A.size()[3])
+                A = A.narrow(1, 0, B.size()[1])
 
-            printSingularFeatureMap(featureMapForStudent)
-            print("Now teacher")
-            printSingularFeatureMap(featureMapForTeacher)
+        distill_loss = F.cosine_similarity(A.reshape(1, -1),
+                                           B.reshape(1, -1))
 
-            exit()
-
-        distill_loss = F.cosine_similarity(featureMapForStudent.reshape(1, -1),
-                                           featureMapForTeacher.reshape(1, -1))
-
+        print("worked")
+        exit()
         distill_loss.backward()
         distill_optimizer.step()
         distill_optimizer.zero_grad()
