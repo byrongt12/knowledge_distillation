@@ -127,7 +127,7 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             # print(featureMapNumForTeacher)
             # print(featureMapNumForStudent)
             heuristicString = "abcde"
-            index = 0
+            index = 4
 
             distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model, student_model_number, batch)
 

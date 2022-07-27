@@ -106,6 +106,7 @@ def convertLayerToCode(student_model_number, featureMapNumForStudent, layerOnly=
 
     return layer, block, conv
 
+
 def differentSizeMaps(featureMapForTeacher, featureMapForStudent):
     # If matrices have different shapes: downsize to small one + shave off values make matrix size identical.
     A = featureMapForTeacher  # .detach().clone()
@@ -121,9 +122,9 @@ def differentSizeMaps(featureMapForTeacher, featureMapForStudent):
             B = transforms.functional.resize(B, A.size()[3])
             A = A.narrow(1, 0, B.size()[1])
 
+
 def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
             student_model_number, batch):
-
     student_model.train()  # put the model in train mode
 
     featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
@@ -135,11 +136,30 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         print("Layer or block or conv is Null")
         exit()
 
-    executeStr = 'torch.optim.SGD(list(student_model.layer' + str(layerForStudent) + '[' + str(blockForStudent - 1) + '].conv' + str(
-        convForStudent) + '.parameters()), lr=0.3)'
-    # torch.optim.SGD(list(student_model.layer2[0].conv2.parameters()), lr=0.3)  # The 8th conv layer.
+    # Add current layer parameters
+    executeStr = 'list(student_model.layer' + str(layerForStudent) + '[' + str(blockForStudent - 1) + '].conv' + str(
+        convForStudent) + '.parameters())'
+    params = eval(executeStr)
 
-    distill_optimizer = eval(executeStr)
+    # Add all layers before parameters
+    for k in range(convForStudent - 1, 0, -1):
+        executeStr = 'list(student_model.layer' + str(layerForStudent) + '[' + str(
+            blockForStudent - 1) + '].conv' + str(k) + '.parameters())'
+        params += eval(executeStr)
+
+    for j in range(blockForStudent - 1, 0, -1):
+        for x in range(1, 3):
+            executeStr = 'list(student_model.layer' + str(layerForStudent) + '[' + str(j - 1) + '].conv' + str(
+                x) + '.parameters())'
+            params += eval(executeStr)
+
+    for i in range(layerForStudent - 1, 0, -1):
+        executeStr = 'list(student_model.layer' + str(i) + '.parameters())'
+        params += eval(executeStr)
+
+    # executeStr = 'torch.optim.SGD(list(student_model.layer' + str(layerForStudent) + '[' + str(blockForStudent - 1) + '].conv' + str(convForStudent) + '.parameters()), lr=0.3)'
+    # torch.optim.SGD(list(student_model.layer2[0].conv2.parameters()), lr=0.3)  # The 8th conv layer.
+    distill_optimizer = torch.optim.SGD(params, lr=0.3)
 
     # get feature map for teacher.
     random.seed(index)
@@ -147,7 +167,8 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     blockForTeacher = random.randint(1, teacher_model_number)
     convForTeacher = random.randint(1, 2)
 
-    featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + ((blockForTeacher - 1) * 2) + convForTeacher
+    featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
+                (blockForTeacher - 1) * 2) + convForTeacher
 
     images, labels = batch
 
