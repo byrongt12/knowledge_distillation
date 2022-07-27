@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import random
 
 from Helper import getModelWeights, getFeatureMaps, distill
 from Print import printFeatureMaps
@@ -76,11 +77,12 @@ def train_model(epochs, train_dl, test_dl, model, optimizer, max_lr, weight_deca
     return history
 
 
-def train_model_with_distillation(epochs, train_dl, test_dl, student_model, student_model_number, teacher_model, device, optimizer, max_lr,
-                                  weight_decay, scheduler,
+def train_model_with_distillation(epochs, train_dl, test_dl, student_model, student_model_number, teacher_model, teacher_model_number, device, optimizer, max_lr,
+                                  weight_decay, scheduler, heuristicToStudentDict,
                                   grad_clip=None):
     torch.cuda.empty_cache()
     history = []
+
 
     optimizer = optimizer(student_model.parameters(), max_lr, weight_decay=weight_decay)
     scheduler = scheduler(optimizer, max_lr, epochs=epochs, steps_per_epoch=len(train_dl))
@@ -111,10 +113,23 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             # Distillation across feature map error - update only from the current layer backward
             # For each batch, step through GA string.
 
-            featureMapNumForTeacher = 56
-            featureMapNumForStudent = 8
+            # 1. Random layer. (1-3)
+            # 2. Random Block for teacher. (1-18)
+            # 3. Random Conv for teacher. (1-2)
+            # 4. Random block for student. (1-3)
+            # 5. Random Conv for student. (1-2)
 
-            distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_model, student_model,student_model_number, batch)
+            # abcdefghijklmnopqr = to find student feature map.
+            # Use random to get corresponding teacher block(1-18) and conv (1-2)
+
+            # featureMapNumForTeacher = random.randint(1, 108)
+            # featureMapNumForStudent = random.randint(1, 18)
+            # print(featureMapNumForTeacher)
+            # print(featureMapNumForStudent)
+            heuristicString = "abcde"
+            index = 0
+
+            distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model, student_model_number, batch)
 
             '''# Step scheduler
             scheduler.step()

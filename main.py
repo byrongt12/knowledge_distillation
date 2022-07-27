@@ -38,6 +38,7 @@ if __name__ == '__main__':
     # RESNET 110
     chk_path = "./resnet110_0.7018.ckpt"
     teacher_model = None
+    teacher_model_number = 18
     if path.exists(chk_path):
         print("Loaded teacher model.")
         teacher_model = ResNet(ResidualBlock, [18, 18, 18])  # ResNet 110
@@ -74,15 +75,34 @@ if __name__ == '__main__':
 
     numOfFeatureMapsForTeacher = getNumberOfConvolutionLayers(teacher_model)
     numOfFeatureMapsForStudent = getNumberOfConvolutionLayers(student_model)
-
+    heuristicToStudentDict = {
+        'a': 1,
+        'b': 2,
+        'c': 3,
+        'd': 4,
+        'e': 5,
+        'f': 6,
+        'g': 7,
+        'h': 8,
+        'i': 9,
+        'j': 10,
+        'k': 11,
+        'l': 12,
+        'm': 13,
+        'n': 14,
+        'o': 15,
+        'p': 16,
+        'q': 17,
+        'r': 18,
+    }
     # Get GA string and pass to function below.
 
     history += train_model_with_distillation(epochs=epochs, train_dl=train_dl, test_dl=test_dl,
-                                             student_model=student_model, student_model_number=student_model_number, teacher_model=teacher_model, device=device,
+                                             student_model=student_model, student_model_number=student_model_number, teacher_model=teacher_model, teacher_model_number=teacher_model_number, device=device,
                                              optimizer=optimizer,
                                              max_lr=max_lr,
                                              grad_clip=grad_clip, weight_decay=weight_decay,
-                                             scheduler=scheduler)
+                                             scheduler=scheduler, heuristicToStudentDict=heuristicToStudentDict)
 
     print("Hyper parameters:")
     print("Number of epochs: " + str(epochs))

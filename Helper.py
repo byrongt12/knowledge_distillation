@@ -1,3 +1,5 @@
+import random
+
 import torch  # need this for eval function
 import torch.nn as nn
 import torch.nn.functional as F
@@ -62,6 +64,7 @@ def getFeatureMaps(model, device, image):
 
     return outputs
 
+
 def printSingularFeatureMap(featureMap):
     feature_map = featureMap.squeeze(0)
     gray_scale = torch.sum(feature_map, 0)
@@ -70,12 +73,8 @@ def printSingularFeatureMap(featureMap):
     plt.imshow(gray_scale.data.cpu().numpy())
     plt.show()
 
-def distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_model, student_model, student_model_number, batch):
 
-    student_model.train()  # put the model in train mode
-
-    # Get optimizer set up for the student model.
-
+def convertLayerToCode(student_model_number, featureMapNumForStudent, layerOnly=False):
     layer = None
     block = None
     conv = None
@@ -86,6 +85,9 @@ def distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_mo
         layer = quotient
     else:
         layer = quotient + 1
+
+    if layerOnly:
+        return layer
 
     if featureMapNumForStudent % divisor == 0:
         block = student_model_number
@@ -102,19 +104,50 @@ def distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_mo
         else:
             conv = 1
 
-    '''print(layer)
-    print(block)
-    print(conv)'''
+    return layer, block, conv
 
-    if layer is None or block is None or conv is None:
+def differentSizeMaps(featureMapForTeacher, featureMapForStudent):
+    # If matrices have different shapes: downsize to small one + shave off values make matrix size identical.
+    A = featureMapForTeacher  # .detach().clone()
+    B = featureMapForStudent  # .detach().clone()
+
+    if featureMapForTeacher.size() != featureMapForStudent.size():
+
+        if A.size() < B.size():  # if the total Student tensor is bigger but inner tensors smaller
+            A = transforms.functional.resize(A, B.size()[3])
+            B = B.narrow(1, 0, A.size()[1])
+
+        elif A.size() > B.size():  # if the total Teacher tensor is bigger but inner tensors smaller
+            B = transforms.functional.resize(B, A.size()[3])
+            A = A.narrow(1, 0, B.size()[1])
+
+def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
+            student_model_number, batch):
+
+    student_model.train()  # put the model in train mode
+
+    featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
+
+    # Get optimizer set up for the student model.
+    layerForStudent, blockForStudent, convForStudent = convertLayerToCode(student_model_number, featureMapNumForStudent)
+
+    if layerForStudent is None or blockForStudent is None or convForStudent is None:
         print("Layer or block or conv is Null")
         exit()
 
-    executeStr = 'torch.optim.SGD(list(student_model.layer' + str(layer) + '[' + str(block - 1) + '].conv' + str(
-        conv) + '.parameters()), lr=0.3)'
+    executeStr = 'torch.optim.SGD(list(student_model.layer' + str(layerForStudent) + '[' + str(blockForStudent - 1) + '].conv' + str(
+        convForStudent) + '.parameters()), lr=0.3)'
     # torch.optim.SGD(list(student_model.layer2[0].conv2.parameters()), lr=0.3)  # The 8th conv layer.
 
     distill_optimizer = eval(executeStr)
+
+    # get feature map for teacher.
+    random.seed(index)
+    layerForTeacher = layerForStudent
+    blockForTeacher = random.randint(1, teacher_model_number)
+    convForTeacher = random.randint(1, 2)
+
+    featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + ((blockForTeacher - 1) * 2) + convForTeacher
 
     images, labels = batch
 
@@ -122,32 +155,9 @@ def distill(featureMapNumForTeacher, featureMapNumForStudent, device, teacher_mo
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
-        A = featureMapForTeacher.detach().clone()
-        B = featureMapForStudent.detach().clone()
+        distill_loss = F.cosine_similarity(featureMapForTeacher.reshape(1, -1),
+                                           featureMapForStudent.reshape(1, -1))
 
-        # If matrices have different shapes: downsize to small one + shave off values make matrix size identical.
-        if featureMapForTeacher.size() != featureMapForStudent.size():
-
-            '''torch.set_printoptions(profile="full")
-            print(A)
-            print(B)
-
-            print(A.size())
-            print(B.size())'''
-
-            if A.size() < B.size():  # if the total Student tensor is bigger but inner tensors smaller
-                A = transforms.functional.resize(A, B.size()[3])
-                B = B.narrow(1, 0, A.size()[1])
-
-            elif A.size() > B.size():  # if the total Teacher tensor is bigger but inner tensors smaller
-                B = transforms.functional.resize(B, A.size()[3])
-                A = A.narrow(1, 0, B.size()[1])
-
-        distill_loss = F.cosine_similarity(A.reshape(1, -1),
-                                           B.reshape(1, -1))
-
-        print("worked")
-        exit()
         distill_loss.backward()
         distill_optimizer.step()
         distill_optimizer.zero_grad()
