@@ -1,8 +1,13 @@
 import torch
 
 def get_device():
+    print("here")
+    print(torch.version.cuda)
+    print(torch.cuda.is_available())
     if torch.cuda.is_available():
+        print("GPU")
         return torch.device("cuda")
+    print("CPU")
     return torch.device("cpu")
 
 

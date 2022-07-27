@@ -56,7 +56,6 @@ if __name__ == '__main__':
     test_dl = ToDeviceLoader(test_dl, device)
 
     # Train student:
-
     '''firstConvWeights = False
     allConvWeightShape = False
     modelSummary = True
