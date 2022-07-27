@@ -7,11 +7,56 @@ from kornia.losses import psnr_loss
 from matplotlib import pyplot as plt
 import torchvision.transforms as transforms
 
-from pytorch_msssim import ms_ssim
-from ignite.engine import Engine
-from ignite.metrics import SSIM, PSNR
+# from pytorch_msssim import ms_ssim
+# from ignite.engine import Engine
+# from ignite.metrics import SSIM, PSNR
 import kornia.metrics as metrics
 
+
+def printLayerAndGradientBoolean(student_model):
+    model_children = list(student_model.children())
+    counter = 0
+
+    for i in range(len(model_children)):
+        if type(model_children[i]) == nn.Conv2d:
+            counter += 1
+            for parameter in model_children[i].parameters():
+                print("Conv layer number: " + str(counter) + " Requires gradient: " + str(parameter.requires_grad))
+
+        elif type(model_children[i]) == nn.Sequential:
+            for j in range(len(model_children[i])):
+                for child in model_children[i][j].children():
+                    if type(child) == nn.Conv2d:
+                        counter += 1
+                        for parameter in child.parameters():
+                            print("Conv layer number: " + str(counter) + " Requires gradient: " + str(
+                                parameter.requires_grad))
+
+
+def changeGradientBoolean(featureMapNumForStudent, student_model):
+    model_children = list(student_model.children())
+    counter = 0
+
+    for i in range(len(model_children)):
+        if type(model_children[i]) == nn.Conv2d:
+            counter += 1
+        if counter > featureMapNumForStudent:
+            for parameter in model_children[i].parameters():
+                parameter.requires_grad = False
+
+        elif type(model_children[i]) == nn.Sequential:
+            for j in range(len(model_children[i])):
+                for child in model_children[i][j].children():
+                    if type(child) == nn.Conv2d:
+                        counter += 1
+                    if counter > featureMapNumForStudent:
+                        for parameter in child.parameters():
+                            parameter.requires_grad = False
+
+def resetGradientBoolean(student_model):
+    for child in student_model.children():
+        for parameter in child.parameters():
+            parameter.requires_grad = True
 
 def getModelWeights(model):
     # save the convolutional layer weights
@@ -146,6 +191,17 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
 
     params = []
 
+    print(featureMapNumForStudent)
+    # HERE
+    # counter to keep count of the conv layers
+    print("Before...")
+    printLayerAndGradientBoolean(student_model)
+    print("Changing...")
+    changeGradientBoolean(featureMapNumForStudent, student_model)
+    print("After...")
+    printLayerAndGradientBoolean(student_model)
+
+    # parameter.requires_grad = True
     # Add all the layers from the start until current layer
     for i in range(1, layerForStudent):
         executeStr = 'list(student_model.layer' + str(i) + '.parameters())'
@@ -186,14 +242,10 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
-        '''print(featureMapForTeacher.size())
-        print(featureMapForTeacher)
-        print(featureMapForStudent.size())
-        print(featureMapForStudent)'''
         print("psnr:")
-        print(psnr_loss(featureMapForStudent, featureMapNumForTeacher, 1))
+        print(psnr_loss(featureMapForStudent, featureMapForTeacher, max_val=1.0))
 
-        # loss is sometimes 0 because vectors are orthogonal!
+        # Cosine, SSIM, PSNR all give NaN or INF loss when calculating gradients using last layers
         distill_loss = F.cosine_similarity(featureMapForTeacher.reshape(1, -1),
                                            featureMapForStudent.reshape(1, -1))
 

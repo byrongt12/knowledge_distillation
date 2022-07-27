@@ -1,5 +1,6 @@
 import pylab as pl
 import torch
+from torch import nn
 
 from torchvision.utils import make_grid
 from torchviz import make_dot
