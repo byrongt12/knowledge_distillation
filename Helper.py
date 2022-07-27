@@ -3,7 +3,7 @@ import random
 import torch  # need this for eval function
 import torch.nn as nn
 import torch.nn.functional as F
-from kornia.losses import psnr_loss
+from kornia.losses import psnr_loss, lovasz_softmax_loss, ssim_loss
 from matplotlib import pyplot as plt
 import torchvision.transforms as transforms
 
@@ -176,32 +176,9 @@ def differentSizeMaps(featureMapForTeacher, featureMapForStudent):
     return A, B
 
 
-def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
-            student_model_number, batch):
-    student_model.train()  # put the model in train mode
-
-    featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
-
-    # Get optimizer set up for the student model.
-    layerForStudent, blockForStudent, convForStudent = convertLayerToCode(student_model_number, featureMapNumForStudent)
-
-    if layerForStudent is None or blockForStudent is None or convForStudent is None:
-        print("Layer or block or conv is Null")
-        exit()
+def creatParametersList(student_model, layerForStudent, blockForStudent, convForStudent):
 
     params = []
-
-    print(featureMapNumForStudent)
-    # HERE
-    # counter to keep count of the conv layers
-    print("Before...")
-    printLayerAndGradientBoolean(student_model)
-    print("Changing...")
-    changeGradientBoolean(featureMapNumForStudent, student_model)
-    print("After...")
-    printLayerAndGradientBoolean(student_model)
-
-    # parameter.requires_grad = True
     # Add all the layers from the start until current layer
     for i in range(1, layerForStudent):
         executeStr = 'list(student_model.layer' + str(i) + '.parameters())'
@@ -221,11 +198,27 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     # Add current layer parameters
     executeStr = 'list(student_model.layer' + str(layerForStudent) + '[' + str(blockForStudent - 1) + '].conv' + str(
         convForStudent) + '.parameters())'
-    params = eval(executeStr)
+    params += eval(executeStr)
 
-    # executeStr = 'torch.optim.SGD(list(student_model.layer' + str(layerForStudent) + '[' + str(blockForStudent - 1) + '].conv' + str(convForStudent) + '.parameters()), lr=0.003)'
-    # torch.optim.SGD(list(student_model.layer2[0].conv2.parameters()), lr=0.3)  # The 8th conv layer.
-    distill_optimizer = torch.optim.SGD(params, lr=0.003)
+    return params
+
+
+def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
+            student_model_number, batch):
+    student_model.train()  # put the model in train mode
+
+    featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
+
+    # Get optimizer set up for the student model.
+    layerForStudent, blockForStudent, convForStudent = convertLayerToCode(student_model_number, featureMapNumForStudent)
+
+    if layerForStudent is None or blockForStudent is None or convForStudent is None:
+        print("Layer or block or conv is Null")
+        exit()
+
+    changeGradientBoolean(featureMapNumForStudent, student_model)
+
+    distill_optimizer = torch.optim.SGD(student_model.parameters(), lr=0.003)
 
     # get feature map for teacher.
     random.seed(index)
@@ -236,14 +229,15 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
             (blockForTeacher - 1) * 2) + convForTeacher
 
+
     images, labels = batch
 
     for image in images:
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
-        print("psnr:")
-        print(psnr_loss(featureMapForStudent, featureMapForTeacher, max_val=1.0))
+        print("ssim:")
+        print(ssim_loss(featureMapForStudent, featureMapForTeacher, max_val=1.0, window_size=1))
 
         # Cosine, SSIM, PSNR all give NaN or INF loss when calculating gradients using last layers
         distill_loss = F.cosine_similarity(featureMapForTeacher.reshape(1, -1),
