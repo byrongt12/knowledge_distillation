@@ -6,6 +6,8 @@ import torch.nn.functional as F
 from kornia.losses import psnr_loss, lovasz_softmax_loss, ssim_loss
 from matplotlib import pyplot as plt
 import torchvision.transforms as transforms
+from torchmetrics.functional import pairwise_euclidean_distance
+from torch.nn.functional import normalize
 
 # from pytorch_msssim import ms_ssim
 # from ignite.engine import Engine
@@ -21,7 +23,7 @@ def printLayerAndGradientBoolean(student_model):
         if type(model_children[i]) == nn.Conv2d:
             counter += 1
             for parameter in model_children[i].parameters():
-                print("Conv layer number: " + str(counter) + " Requires gradient: " + str(parameter.requires_grad))
+                print("Conv layer number: " + str(counter) + ". Requires gradient: " + str(parameter.requires_grad))
 
         elif type(model_children[i]) == nn.Sequential:
             for j in range(len(model_children[i])):
@@ -29,8 +31,27 @@ def printLayerAndGradientBoolean(student_model):
                     if type(child) == nn.Conv2d:
                         counter += 1
                         for parameter in child.parameters():
-                            print("Conv layer number: " + str(counter) + " Requires gradient: " + str(
+                            print("Conv layer number: " + str(counter) + ". Requires gradient: " + str(
                                 parameter.requires_grad))
+
+def printLayerAndGradient(student_model):
+    model_children = list(student_model.children())
+    counter = 0
+
+    for i in range(len(model_children)):
+        if type(model_children[i]) == nn.Conv2d:
+            counter += 1
+            for parameter in model_children[i].parameters():
+                print("Conv layer number: " + str(counter) + ". Gradient: " + str(parameter.grad))
+
+        elif type(model_children[i]) == nn.Sequential:
+            for j in range(len(model_children[i])):
+                for child in model_children[i][j].children():
+                    if type(child) == nn.Conv2d:
+                        counter += 1
+                        for parameter in child.parameters():
+                            print("Conv layer number: " + str(counter) + ". Gradient: " + str(
+                                parameter.grad))
 
 
 def changeGradientBoolean(featureMapNumForStudent, student_model):
@@ -216,7 +237,9 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         print("Layer or block or conv is Null")
         exit()
 
-    changeGradientBoolean(featureMapNumForStudent, student_model)
+    # changeGradientBoolean(featureMapNumForStudent, student_model)
+    # printLayerAndGradientBoolean(student_model)
+    # printLayerAndGradient(student_model)
 
     distill_optimizer = torch.optim.SGD(student_model.parameters(), lr=0.003)
 
@@ -229,6 +252,8 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
             (blockForTeacher - 1) * 2) + convForTeacher
 
+    print(featureMapNumForStudent)
+    print(featureMapNumForTeacher)
 
     images, labels = batch
 
@@ -236,16 +261,30 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
-        print("ssim:")
+        # printSingularFeatureMap(featureMapForTeacher)
+        # printSingularFeatureMap(featureMapForStudent)
+
+        '''print("ssim:", end=" ")
         print(ssim_loss(featureMapForStudent, featureMapForTeacher, max_val=1.0, window_size=1))
 
         # Cosine, SSIM, PSNR all give NaN or INF loss when calculating gradients using last layers
         distill_loss = F.cosine_similarity(featureMapForTeacher.reshape(1, -1),
                                            featureMapForStudent.reshape(1, -1))
 
-        print(distill_loss)
-        exit()
-        distill_loss.backward()
+        print(distill_loss)'''
+        # Normalize tensor so NaN values do not get produced by loss function
+        t = normalize(featureMapForTeacher, p=1.0, dim=2)
+        t = normalize(t, p=1.0, dim=3)
+        s = normalize(featureMapForStudent, p=1.0, dim=2)
+        s = normalize(s, p=1.0, dim=3)
+
+        # Euclidean dist loss function
+        pair_wise_loss = pairwise_euclidean_distance(t.reshape(1, -1), s.reshape(1, -1))
+        pair_wise_loss.backward()
+        # clip gradients?
+        # printLayerAndGradient(student_model)
+        # exit()
         distill_optimizer.step()
         distill_optimizer.zero_grad()
+        # resetGradientBoolean(student_model)
         break
