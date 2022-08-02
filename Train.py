@@ -80,14 +80,13 @@ def train_model(epochs, train_dl, test_dl, model, optimizer, max_lr, weight_deca
 
 def train_model_with_distillation(epochs, train_dl, test_dl, student_model, student_model_number, teacher_model,
                                   teacher_model_number, device, optimizer, max_lr,
-                                  weight_decay, scheduler, heuristicToStudentDict,
+                                  weight_decay, scheduler, heuristicToStudentDict, kd_loss_type,
                                   grad_clip=None):
     torch.cuda.empty_cache()
     history = []
 
     optimizer = optimizer(student_model.parameters(), max_lr, weight_decay=weight_decay)
     scheduler = scheduler(optimizer, max_lr, epochs=epochs, steps_per_epoch=len(train_dl))
-
 
     for epoch in range(epochs):
         student_model.train()  # put the model in train mode
@@ -106,9 +105,21 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             train_loss.append(loss)
             train_acc.append(acc)
 
-            # Distillation across feature map error - update only from the current layer backward
-            # For each batch, step through GA string.
+            loss.backward()
 
+            if grad_clip:
+                nn.utils.clip_grad_value_(student_model.parameters(), grad_clip)
+
+            optimizer.step()
+            for param in student_model.parameters():  # instead of: optimizer.zero_grad()
+                param.grad = None
+
+            # Step scheduler
+            scheduler.step()
+            lrs.append(get_lr(optimizer))
+
+            # Distillation
+            # For each batch, step through GA string.
             # abcdefghijklmnopqr = to find student feature map.
             # Use random to get corresponding teacher block(1-18) and conv (1-2)
 
@@ -116,26 +127,9 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             heuristicString = "abcdefghijklmnopqr"
             index = random.randint(0, 17)
 
-            kd_loss_arr = distill(heuristicString, index, heuristicToStudentDict, device, teacher_model,
-                              teacher_model_number,
-                              student_model, student_model_number, batch)
-            losses = kd_loss_arr
-            losses.insert(0, loss)
-            total_loss = sum(losses)
-
-            total_loss.backward()
-
-            if grad_clip:
-                nn.utils.clip_grad_value_(student_model.parameters(), grad_clip)
-
-            optimizer.step()
-            # optimizer.zero_grad()
-            for param in student_model.parameters():
-                param.grad = None
-
-            # Step scheduler
-            scheduler.step()
-            lrs.append(get_lr(optimizer))
+            distill(heuristicString, index, heuristicToStudentDict, device, teacher_model,
+                                  teacher_model_number,
+                                  student_model, student_model_number, batch, kd_loss_type)
 
         result = evaluate(student_model, test_dl)
         result["train_loss"] = torch.stack(train_loss).mean().item()

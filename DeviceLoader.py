@@ -2,6 +2,7 @@ import torch
 
 def get_device():
     if torch.cuda.is_available():
+        torch.cuda.empty_cache()
         return torch.device("cuda")
     return torch.device("cpu")
 

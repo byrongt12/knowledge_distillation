@@ -34,6 +34,7 @@ def printLayerAndGradientBoolean(student_model):
                             print("Conv layer number: " + str(counter) + ". Requires gradient: " + str(
                                 parameter.requires_grad))
 
+
 def printLayerAndGradient(student_model):
     model_children = list(student_model.children())
     counter = 0
@@ -74,10 +75,12 @@ def changeGradientBoolean(featureMapNumForStudent, student_model):
                         for parameter in child.parameters():
                             parameter.requires_grad = False
 
+
 def resetGradientBoolean(student_model):
     for child in student_model.children():
         for parameter in child.parameters():
             parameter.requires_grad = True
+
 
 def getModelWeights(model):
     # save the convolutional layer weights
@@ -198,7 +201,6 @@ def differentSizeMaps(featureMapForTeacher, featureMapForStudent):
 
 
 def creatParametersList(student_model, layerForStudent, blockForStudent, convForStudent):
-
     params = []
     # Add all the layers from the start until current layer
     for i in range(1, layerForStudent):
@@ -225,7 +227,7 @@ def creatParametersList(student_model, layerForStudent, blockForStudent, convFor
 
 
 def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
-            student_model_number, batch):
+            student_model_number, batch, kd_loss_type):
     student_model.train()  # put the model in train mode
 
     featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
@@ -237,11 +239,11 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         print("Layer or block or conv is Null")
         exit()
 
-    # changeGradientBoolean(featureMapNumForStudent, student_model)
+    changeGradientBoolean(featureMapNumForStudent, student_model)
     # printLayerAndGradientBoolean(student_model)
     # printLayerAndGradient(student_model)
 
-    distill_optimizer = torch.optim.SGD(student_model.parameters(), lr=0.003)
+    distill_optimizer = torch.optim.SGD(student_model.parameters(), lr=0.3)
 
     # get feature map for teacher.
     random.seed(index)
@@ -256,39 +258,31 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     # print(featureMapNumForTeacher)
 
     images, labels = batch
-    kd_loss_arr = []
 
     for image in images:
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
-        # printSingularFeatureMap(featureMapForTeacher)
-        # printSingularFeatureMap(featureMapForStudent)
-
-        '''print("ssim:", end=" ")
-        print(ssim_loss(featureMapForStudent, featureMapForTeacher, max_val=1.0, window_size=1))
-
-        # Cosine, SSIM, PSNR all give NaN or INF loss when calculating gradients using last layers
-        distill_loss = F.cosine_similarity(featureMapForTeacher.reshape(1, -1),
-                                           featureMapForStudent.reshape(1, -1))
-
-        print(distill_loss)'''
         # Normalize tensor so NaN values do not get produced by loss function
         t = normalize(featureMapForTeacher, p=1.0, dim=2)
         t = normalize(t, p=1.0, dim=3)
         s = normalize(featureMapForStudent, p=1.0, dim=2)
         s = normalize(s, p=1.0, dim=3)
 
-        # Euclidean dist loss function
-        kd_loss_arr.append(pairwise_euclidean_distance(t.reshape(1, -1), s.reshape(1, -1)))
+        # Loss functions: Cosine, SSIM, PSNR and Euclidean dist
+        distill_loss = 0
+        if kd_loss_type == 'ssim':
+            distill_loss = ssim_loss(s, t, max_val=1.0, window_size=1)
+        elif kd_loss_type == 'psnr':
+            distill_loss = psnr_loss(s, t, max_val=1.0)
+        elif kd_loss_type == 'cosine':
+            distill_loss = F.cosine_similarity(t.reshape(1, -1), s.reshape(1, -1))
+        elif kd_loss_type == 'euclidean':
+            distill_loss = pairwise_euclidean_distance(t.reshape(1, -1), s.reshape(1, -1))
 
-        return kd_loss_arr
-
-    '''pair_wise_loss.backward()
-    # clip gradients?
-    # printLayerAndGradient(student_model)
-    # exit()
-    distill_optimizer.step()
-    distill_optimizer.zero_grad()
-    # resetGradientBoolean(student_model)
-    break'''
+        distill_loss.backward()
+        # clip gradients?
+        distill_optimizer.step()
+        distill_optimizer.zero_grad()
+        resetGradientBoolean(student_model)
+        break
