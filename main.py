@@ -17,16 +17,20 @@ from Helper import getFeatureMaps
 
 if __name__ == '__main__':
 
+    teacher_model_number = 18  # ResNet 110
+    student_model_number = 3  # ResNet 20
+
     epochs = 20
     BATCH_SIZE = 100
+
     optimizer = torch.optim.Adam
     max_lr = 0.003
 
-    distill_optimizer_name = "SGD"
+    distill_optimizer = torch.optim.SGD
     distill_lr = 0.3
 
     grad_clip = 0
-    weight_decay = 1e-4
+    weight_decay = 0
     scheduler = torch.optim.lr_scheduler.OneCycleLR
     kd_loss_type = 'ssim'
 
@@ -51,17 +55,15 @@ if __name__ == '__main__':
     # RESNET 110
     chk_path = "./resnet110_0.7018.ckpt"
     teacher_model = None
-    teacher_model_number = 18
     if path.exists(chk_path):
         print("Loaded teacher model.")
-        teacher_model = ResNet(ResidualBlock, [18, 18, 18])  # ResNet 110
+        teacher_model = ResNet(ResidualBlock, [teacher_model_number, teacher_model_number, teacher_model_number])
         teacher_model.load_state_dict(torch.load(chk_path))
     else:
         print("No teacher model found.")
         exit()
 
-    student_model_number = 3
-    student_model = ResNet(ResidualBlock, [3, 3, 3])  # ResNet 20
+    student_model = ResNet(ResidualBlock, [student_model_number, student_model_number, student_model_number])
 
     teacher_model = to_device(teacher_model, device)
     student_model = to_device(student_model, device)
@@ -109,7 +111,7 @@ if __name__ == '__main__':
                                              max_lr=max_lr,
                                              grad_clip=grad_clip, weight_decay=weight_decay,
                                              scheduler=scheduler, heuristicToStudentDict=heuristicToStudentDict,
-                                             kd_loss_type=kd_loss_type, distill_optimizer_name=distill_optimizer_name, distill_lr=distill_lr)
+                                             kd_loss_type=kd_loss_type, distill_optimizer=distill_optimizer, distill_lr=distill_lr)
 
     print("Hyper parameters:")
     print("Number of epochs: " + str(epochs))
