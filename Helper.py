@@ -252,10 +252,11 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
             (blockForTeacher - 1) * 2) + convForTeacher
 
-    print(featureMapNumForStudent)
-    print(featureMapNumForTeacher)
+    # print(featureMapNumForStudent)
+    # print(featureMapNumForTeacher)
 
     images, labels = batch
+    kd_loss_arr = []
 
     for image in images:
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
@@ -279,12 +280,15 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         s = normalize(s, p=1.0, dim=3)
 
         # Euclidean dist loss function
-        pair_wise_loss = pairwise_euclidean_distance(t.reshape(1, -1), s.reshape(1, -1))
-        pair_wise_loss.backward()
-        # clip gradients?
-        # printLayerAndGradient(student_model)
-        # exit()
-        distill_optimizer.step()
-        distill_optimizer.zero_grad()
-        # resetGradientBoolean(student_model)
-        break
+        kd_loss_arr.append(pairwise_euclidean_distance(t.reshape(1, -1), s.reshape(1, -1)))
+
+        return kd_loss_arr
+
+    '''pair_wise_loss.backward()
+    # clip gradients?
+    # printLayerAndGradient(student_model)
+    # exit()
+    distill_optimizer.step()
+    distill_optimizer.zero_grad()
+    # resetGradientBoolean(student_model)
+    break'''

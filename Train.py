@@ -88,28 +88,23 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
     optimizer = optimizer(student_model.parameters(), max_lr, weight_decay=weight_decay)
     scheduler = scheduler(optimizer, max_lr, epochs=epochs, steps_per_epoch=len(train_dl))
 
+
     for epoch in range(epochs):
         student_model.train()  # put the model in train mode
         train_loss = []
         train_acc = []
         lrs = []
+        batch_count = 0
 
         for batch in train_dl:
+
+            batch_count += 1
+            # print(batch_count)
 
             # Normal error and update
             loss, acc = student_model.training_step(batch)
             train_loss.append(loss)
             train_acc.append(acc)
-
-            loss.backward()
-
-            if grad_clip:
-                nn.utils.clip_grad_value_(student_model.parameters(), grad_clip)
-
-            optimizer.step()
-            # optimizer.zero_grad()
-            for param in student_model.parameters():
-                param.grad = None
 
             # Distillation across feature map error - update only from the current layer backward
             # For each batch, step through GA string.
@@ -120,9 +115,23 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             random.seed(datetime.now())
             heuristicString = "abcdefghijklmnopqr"
             index = random.randint(0, 17)
-            
-            distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number,
-                    student_model, student_model_number, batch)
+
+            kd_loss_arr = distill(heuristicString, index, heuristicToStudentDict, device, teacher_model,
+                              teacher_model_number,
+                              student_model, student_model_number, batch)
+            losses = kd_loss_arr
+            losses.insert(0, loss)
+            total_loss = sum(losses)
+
+            total_loss.backward()
+
+            if grad_clip:
+                nn.utils.clip_grad_value_(student_model.parameters(), grad_clip)
+
+            optimizer.step()
+            # optimizer.zero_grad()
+            for param in student_model.parameters():
+                param.grad = None
 
             # Step scheduler
             scheduler.step()
