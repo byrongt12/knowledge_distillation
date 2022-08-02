@@ -227,7 +227,7 @@ def creatParametersList(student_model, layerForStudent, blockForStudent, convFor
 
 
 def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
-            student_model_number, batch, kd_loss_type):
+            student_model_number, batch, kd_loss_type, distill_optimizer_name, distill_lr):
     student_model.train()  # put the model in train mode
 
     featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
@@ -243,7 +243,7 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
     # printLayerAndGradientBoolean(student_model)
     # printLayerAndGradient(student_model)
 
-    distill_optimizer = torch.optim.SGD(student_model.parameters(), lr=0.3)
+    distill_optimizer = eval("torch.optim." + distill_optimizer_name + "(student_model.parameters(), lr=" + str(distill_lr) + ")")
 
     # get feature map for teacher.
     random.seed(index)

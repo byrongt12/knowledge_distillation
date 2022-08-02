@@ -18,9 +18,12 @@ from Helper import getFeatureMaps
 if __name__ == '__main__':
 
     epochs = 20
+    BATCH_SIZE = 100
     optimizer = torch.optim.Adam
     max_lr = 0.003
-    BATCH_SIZE = 100
+
+    distill_optimizer_name = "SGD"
+    distill_lr = 0.3
 
     grad_clip = 0
     weight_decay = 1e-4
@@ -106,7 +109,7 @@ if __name__ == '__main__':
                                              max_lr=max_lr,
                                              grad_clip=grad_clip, weight_decay=weight_decay,
                                              scheduler=scheduler, heuristicToStudentDict=heuristicToStudentDict,
-                                             kd_loss_type=kd_loss_type)
+                                             kd_loss_type=kd_loss_type, distill_optimizer_name=distill_optimizer_name, distill_lr=distill_lr)
 
     print("Hyper parameters:")
     print("Number of epochs: " + str(epochs))
