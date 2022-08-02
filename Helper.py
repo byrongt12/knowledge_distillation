@@ -239,7 +239,7 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         print("Layer or block or conv is Null")
         exit()
 
-    changeGradientBoolean(featureMapNumForStudent, student_model)
+    # changeGradientBoolean(featureMapNumForStudent, student_model)
     # printLayerAndGradientBoolean(student_model)
     # printLayerAndGradient(student_model)
 
@@ -284,5 +284,5 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         # clip gradients?
         distill_optimizer.step()
         distill_optimizer.zero_grad()
-        resetGradientBoolean(student_model)
+        # resetGradientBoolean(student_model)
         break
