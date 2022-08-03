@@ -226,40 +226,47 @@ def creatParametersList(student_model, layerForStudent, blockForStudent, convFor
     return params
 
 
-def distill(heuristicString, index, heuristicToStudentDict, device, teacher_model, teacher_model_number, student_model,
-            student_model_number, batch, kd_loss_type, distill_optimizer, distill_lr):
+def distill(heuristicString, heuristicToStudentDict, kd_loss_type, distill_optimizer, distill_lr, batch_item, student_model,
+            student_model_number, teacher_model, teacher_model_number, device):
+
     student_model.train()  # put the model in train mode
 
-    featureMapNumForStudent = heuristicToStudentDict[heuristicString[index]]
+    kd_loss_arr = []
+    featureMapNumForStudentArr = []
+    distill_optimizer_implemented = distill_optimizer(student_model.parameters(), lr=distill_lr)
 
-    # Get optimizer set up for the student model.
-    layerForStudent, blockForStudent, convForStudent = convertLayerToCode(student_model_number, featureMapNumForStudent)
+    for i in range(0, len(heuristicString)):
+        featureMapNumForStudentArr.append(heuristicToStudentDict[heuristicString[i]])
 
-    if layerForStudent is None or blockForStudent is None or convForStudent is None:
-        print("Layer or block or conv is Null")
-        exit()
+    for i in range(0, len(featureMapNumForStudentArr)):
 
-    # changeGradientBoolean(featureMapNumForStudent, student_model)
-    # printLayerAndGradientBoolean(student_model)
-    # printLayerAndGradient(student_model)
+        featureMapNumForStudent = featureMapNumForStudentArr[i]
 
-    distill_optimizer = distill_optimizer(student_model.parameters(), lr=distill_lr)
+        # Get optimizer set up for the student model.
+        layerForStudent, blockForStudent, convForStudent = convertLayerToCode(student_model_number, featureMapNumForStudent)
 
-    # get feature map for teacher.
-    random.seed(index)
-    layerForTeacher = layerForStudent
-    blockForTeacher = random.randint(1, teacher_model_number)
-    convForTeacher = random.randint(1, 2)
+        if layerForStudent is None or blockForStudent is None or convForStudent is None:
+            print("Layer or block or conv is Null")
+            exit()
 
-    featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
-            (blockForTeacher - 1) * 2) + convForTeacher
+        # changeGradientBoolean(featureMapNumForStudent, student_model)
+        # printLayerAndGradientBoolean(student_model)
+        # printLayerAndGradient(student_model)
 
-    # print(featureMapNumForStudent)
-    # print(featureMapNumForTeacher)
+        # get feature map for teacher.
+        random.seed(i)
+        layerForTeacher = layerForStudent
+        blockForTeacher = random.randint(1, teacher_model_number)
+        convForTeacher = random.randint(1, 2)
 
-    images, labels = batch
+        featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
+                (blockForTeacher - 1) * 2) + convForTeacher
 
-    for image in images:
+        print(featureMapNumForStudent)
+        print(featureMapNumForTeacher)
+
+        image = batch_item
+
         featureMapForTeacher = getFeatureMaps(teacher_model, device, image)[featureMapNumForTeacher]
         featureMapForStudent = getFeatureMaps(student_model, device, image)[featureMapNumForStudent]
 
@@ -280,9 +287,12 @@ def distill(heuristicString, index, heuristicToStudentDict, device, teacher_mode
         elif kd_loss_type == 'euclidean':
             distill_loss = pairwise_euclidean_distance(t.reshape(1, -1), s.reshape(1, -1))
 
-        distill_loss.backward()
-        # clip gradients?
-        distill_optimizer.step()
-        distill_optimizer.zero_grad()
-        # resetGradientBoolean(student_model)
-        break
+        kd_loss_arr.append(distill_loss)
+
+    total_loss = sum(kd_loss_arr)
+    total_loss.backward()
+    # clip gradients?
+    distill_optimizer_implemented.step()
+    distill_optimizer_implemented.zero_grad()
+    # resetGradientBoolean(student_model)
+

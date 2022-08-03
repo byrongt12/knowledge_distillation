@@ -24,10 +24,10 @@ if __name__ == '__main__':
     BATCH_SIZE = 100
 
     optimizer = torch.optim.Adam
-    max_lr = 0.003
+    max_lr = 0.01
 
     distill_optimizer = torch.optim.SGD
-    distill_lr = 0.3
+    distill_lr = 0.1
 
     grad_clip = 0
     weight_decay = 0
@@ -109,9 +109,9 @@ if __name__ == '__main__':
                                              device=device,
                                              optimizer=optimizer,
                                              max_lr=max_lr,
-                                             grad_clip=grad_clip, weight_decay=weight_decay,
+                                             weight_decay=weight_decay,
                                              scheduler=scheduler, heuristicToStudentDict=heuristicToStudentDict,
-                                             kd_loss_type=kd_loss_type, distill_optimizer=distill_optimizer, distill_lr=distill_lr)
+                                             kd_loss_type=kd_loss_type, distill_optimizer=distill_optimizer, distill_lr=distill_lr, grad_clip=grad_clip,)
 
     print("Hyper parameters:")
     print("Number of epochs: " + str(epochs))

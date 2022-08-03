@@ -80,7 +80,8 @@ def train_model(epochs, train_dl, test_dl, model, optimizer, max_lr, weight_deca
 
 def train_model_with_distillation(epochs, train_dl, test_dl, student_model, student_model_number, teacher_model,
                                   teacher_model_number, device, optimizer, max_lr,
-                                  weight_decay, scheduler, heuristicToStudentDict, kd_loss_type, distill_optimizer, distill_lr,
+                                  weight_decay, scheduler, heuristicToStudentDict, kd_loss_type, distill_optimizer,
+                                  distill_lr,
                                   grad_clip=None):
     torch.cuda.empty_cache()
     history = []
@@ -125,11 +126,10 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
 
             random.seed(datetime.now())
             heuristicString = "abcdefghijklmnopqr"
-            index = random.randint(0, 17)
 
-            distill(heuristicString, index, heuristicToStudentDict, device, teacher_model,
-                                  teacher_model_number,
-                                  student_model, student_model_number, batch, kd_loss_type, distill_optimizer, distill_lr)
+            distill(heuristicString, heuristicToStudentDict, kd_loss_type, distill_optimizer, distill_lr, batch[0][0],
+                    student_model,
+                    student_model_number, teacher_model, teacher_model_number, device)
 
         result = evaluate(student_model, test_dl)
         result["train_loss"] = torch.stack(train_loss).mean().item()
