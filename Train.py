@@ -78,9 +78,9 @@ def train_model(epochs, train_dl, test_dl, model, optimizer, max_lr, weight_deca
     return history
 
 
-def train_model_with_distillation(epochs, train_dl, test_dl, student_model, student_model_number, teacher_model,
+def train_model_with_distillation(heuristicString, heuristicToStudentDict, epochs, train_dl, test_dl, student_model, student_model_number, teacher_model,
                                   teacher_model_number, device, optimizer, max_lr,
-                                  weight_decay, scheduler, heuristicToStudentDict, kd_loss_type, distill_optimizer,
+                                  weight_decay, scheduler, kd_loss_type, distill_optimizer,
                                   distill_lr,
                                   grad_clip=None):
     torch.cuda.empty_cache()
@@ -119,16 +119,19 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             scheduler.step()
             lrs.append(get_lr(optimizer))
 
+        # calculate validation before distillation loss
+        result_before_distill = evaluate(student_model, test_dl)
         # Distillation
         # For each epoch, step through GA string.
         # abcdefghijklmnopqr = to find student feature map.
         # Use random to get corresponding teacher block(1-18) and conv (1-2)
-        random.seed(datetime.now())
-        heuristicString = "abcdefghijklmnopqr"
-
         distill(heuristicString, heuristicToStudentDict, kd_loss_type, distill_optimizer, distill_lr, next(iter(train_dl))[0][0],
                 student_model,
                 student_model_number, teacher_model, teacher_model_number, device)
+
+        result_after_distill = evaluate(student_model, test_dl)
+
+        fitness = result_after_distill['val_acc'] - result_before_distill['val_acc']
 
         # Add results:
         result = evaluate(student_model, test_dl)

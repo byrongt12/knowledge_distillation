@@ -102,15 +102,16 @@ if __name__ == '__main__':
         'r': 18,
     }
     # Get GA string and pass to function below.
-
-    history += train_model_with_distillation(epochs=epochs, train_dl=train_dl, test_dl=test_dl,
+    # del model
+    heuristicString = "abcdefghijklmnopqr"
+    history += train_model_with_distillation(heuristicString=heuristicString, heuristicToStudentDict=heuristicToStudentDict, epochs=epochs, train_dl=train_dl, test_dl=test_dl,
                                              student_model=student_model, student_model_number=student_model_number,
                                              teacher_model=teacher_model, teacher_model_number=teacher_model_number,
                                              device=device,
                                              optimizer=optimizer,
                                              max_lr=max_lr,
                                              weight_decay=weight_decay,
-                                             scheduler=scheduler, heuristicToStudentDict=heuristicToStudentDict,
+                                             scheduler=scheduler,
                                              kd_loss_type=kd_loss_type, distill_optimizer=distill_optimizer, distill_lr=distill_lr, grad_clip=grad_clip,)
 
     print("Hyper parameters:")
