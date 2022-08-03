@@ -119,18 +119,18 @@ def train_model_with_distillation(epochs, train_dl, test_dl, student_model, stud
             scheduler.step()
             lrs.append(get_lr(optimizer))
 
-            # Distillation
-            # For each batch, step through GA string.
-            # abcdefghijklmnopqr = to find student feature map.
-            # Use random to get corresponding teacher block(1-18) and conv (1-2)
+        # Distillation
+        # For each epoch, step through GA string.
+        # abcdefghijklmnopqr = to find student feature map.
+        # Use random to get corresponding teacher block(1-18) and conv (1-2)
+        random.seed(datetime.now())
+        heuristicString = "abcdefghijklmnopqr"
 
-            random.seed(datetime.now())
-            heuristicString = "abcdefghijklmnopqr"
+        distill(heuristicString, heuristicToStudentDict, kd_loss_type, distill_optimizer, distill_lr, next(iter(train_dl))[0][0],
+                student_model,
+                student_model_number, teacher_model, teacher_model_number, device)
 
-            distill(heuristicString, heuristicToStudentDict, kd_loss_type, distill_optimizer, distill_lr, batch[0][0],
-                    student_model,
-                    student_model_number, teacher_model, teacher_model_number, device)
-
+        # Add results:
         result = evaluate(student_model, test_dl)
         result["train_loss"] = torch.stack(train_loss).mean().item()
         result["train_acc"] = torch.stack(train_acc).mean().item()

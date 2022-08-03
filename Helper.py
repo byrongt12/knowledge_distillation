@@ -262,8 +262,8 @@ def distill(heuristicString, heuristicToStudentDict, kd_loss_type, distill_optim
         featureMapNumForTeacher = ((layerForTeacher - 1) * (teacher_model_number * 2)) + (
                 (blockForTeacher - 1) * 2) + convForTeacher
 
-        print(featureMapNumForStudent)
-        print(featureMapNumForTeacher)
+        # print(featureMapNumForStudent)
+        # print(featureMapNumForTeacher)
 
         image = batch_item
 
